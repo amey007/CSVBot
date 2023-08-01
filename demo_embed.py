@@ -1,16 +1,32 @@
+import os
 import streamlit as st
+import tempfile
 from streamlit_chat import message
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.vectorstores import FAISS
-import tempfile
+from dotenv import load_dotenv  
+
+# Load environment variables from .env file
+load_dotenv()
+
+st.set_page_config(page_title= "ChatDoc Application - OpenAI Embeddings 📃")
+
+st.header("ChatDoc Application - OpenAI Embeddings 📃")
 
 user_api_key = st.sidebar.text_input(
     label="#### Your OpenAI API key 👇",
     placeholder="Paste your openAI API key, sk-",
     type="password")
+
+if user_api_key is not None:
+    os.putenv("OPENAI_API_KEY", user_api_key)
+    load_dotenv()
+
+
+st.write(user_api_key)
 
 uploaded_file = st.sidebar.file_uploader("upload", type="csv")
 
@@ -20,17 +36,14 @@ if uploaded_file :
         tmp_file.write(uploaded_file.getvalue())
         tmp_file_path = tmp_file.name
 
-    loader = CSVLoader(file_path=tmp_file_path, encoding="utf-8", csv_args={
-                'delimiter': ','})
+    loader = CSVLoader(file_path=tmp_file_path)
     data = loader.load()
 
-    # st.write(data)
-
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(openai_api_key=user_api_key)
     vectorstore = FAISS.from_documents(data, embeddings)
 
     chain = ConversationalRetrievalChain.from_llm(
-    llm = ChatOpenAI(temperature=0.0,model_name='gpt-3.5-turbo'),
+    llm = ChatOpenAI(temperature=0.0,model_name='gpt-3.5-turbo', openai_api_key=user_api_key),
     retriever=vectorstore.as_retriever())
 
     def conversational_chat(query):   
